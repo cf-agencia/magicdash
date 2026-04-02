@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAGICDASH - Agencia</title>
+    <title>MagicDash - Agencia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
@@ -136,14 +136,14 @@
             <div class="mb-6">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">Contable</p>
                 <div class="sidebar-item p-3 rounded-xl text-sm font-semibold flex items-center gap-3" onclick="showSection('Presupuesto')">
-                    <span>💰</span> Presupuesto Agencia
+                    <span>💰</span> Presupuesto
                 </div>
             </div>
 
             <div class="mb-6">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">Operación</p>
                 <div class="sidebar-item p-3 rounded-xl text-sm font-semibold flex items-center gap-3" onclick="showSection('Procesos')">
-                    <span>⚙️</span> Procesos Agencia
+                    <span>⚙️</span> Procesos
                 </div>
             </div>
 
@@ -185,7 +185,7 @@
         <header class="sticky top-0 z-10 p-6 flex justify-between items-center bg-white/30 backdrop-blur-md border-b border-white/20">
             <h1 id="section-title" class="text-2xl font-bold text-slate-800">Panel Principal</h1>
             <div class="flex items-center gap-4 text-sm font-medium text-slate-600">
-                <span class="bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">Cartagena, CO</span>
+                <span class="bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">Cartagena, CO - <span id="fecha-hoy-titulo"></span></span>
             </div>
         </header>
 
@@ -276,6 +276,17 @@
     </main>
 
     <script>
+
+// <!-- HORA -->
+
+  const fecha = new Date();
+  const opcionesFecha = { year: 'numeric', month: 'long', day: 'numeric' };
+  const opcionesHora = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+  const fechaTexto = fecha.toLocaleDateString('es-CO', opcionesFecha);
+  const horaTexto = fecha.toLocaleTimeString('es-CO', opcionesHora);
+  document.getElementById("fecha-hoy-titulo").textContent = fechaTexto + " - " + horaTexto;
+
+
 
 // <!-- MENU GENERAL -->
 
@@ -1225,265 +1236,530 @@
 
 
 // <!-- LLAMADA DE PRESUPUESTO - SUBSECCIONES -->
+        // ====================== DATOS GLOBALES ======================
+        let presupuestoGlobal = null;
 
-        const budgetData = [
-            { nombre: "POLIZA HYC AGENCIA", valor: 232473094, meta: 300000000 },
-            { nombre: "PRESTACIONES", valor: 1025154250, meta: 1200000000 },
-            { nombre: "SEGURIDAD SOCIAL", valor: 458508855, meta: 500000000 },
-            { nombre: "SALARIOS", valor: 2067063368, meta: 2500000000 },
-            { nombre: "HONORARIOS", valor: 321239227, meta: 400000000 },
-            { nombre: "ARRIENDOS", valor: 1473034552, meta: 1600000000 },
-            { nombre: "DIVERSOS", valor: 772646308, meta: 900000000 }
-            // Puedes agregar el resto de las cuentas aquí siguiendo el mismo formato
+        // ====================== CARGAR DATOS DESDE GOOGLE SHEET ======================
+        async function cargarDatosPresupuesto() {
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxjON5cIZf5EkP47Q5YpIpkw9f0ZhpNPRYN-DaK8RBC9ydXENCH4_Zko1NByPwfyl6s/exec";
+
+        try {
+            const res = await fetch(WEB_APP_URL);
+            const data = await res.json();
+
+            if (data.error) {
+            console.error("Error del Sheet:", data.error);
+            return null;
+            }
+
+            presupuestoGlobal = data;
+            console.log("✅ Datos cargados correctamente desde Google Sheet", data);
+            return data;
+        } catch (e) {
+            console.error("❌ Error al conectar con Google Sheet:", e);
+            return null;
+        }
+        }
+
+        // ====================== RENDER PRESUPUESTO (Tarjetas con arco corregido) ======================
+        async function renderPresupuesto() {
+        const grid = document.getElementById('submenu-grid');
+
+        document.getElementById('section-title').innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-2xl font-black text-slate-800">Presupuesto</span>
+            <button onclick="renderEjecucionGeneral()" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-widest px-6 py-3 rounded-2xl shadow-lg transition-all flex items-center gap-2">
+                Ver Ejecución General <span class="text-lg">📋</span>
+            </button>
+            </div>
+        `;
+
+        grid.className = "w-full pb-10";
+        grid.innerHTML = '<p class="text-center py-20 text-slate-400">Cargando tarjetas...</p>';
+
+        if (!presupuestoGlobal) {
+            await cargarDatosPresupuesto();
+        }
+
+        if (!presupuestoGlobal || !presupuestoGlobal.cuentas) {
+            grid.innerHTML = '<p class="text-center py-20 text-red-500">Error al cargar datos del Google Sheet.</p>';
+            return;
+        }
+
+        // Convertimos los datos del Sheet
+        const budgetDataCompleto = presupuestoGlobal.cuentas.map(c => ({
+            nombre: c.nombre,
+            valor: parseFloat(String(c.valorEjecutado).replace(/[^0-9.-]+/g, '')) || 0,
+            meta: parseFloat(String(c.meta).replace(/[^0-9.-]+/g, '')) || 0
+        }));
+
+        const prioridadManual = [
+            "PUBLICIDAD", "DIVERSOS", "GASTOS UNIDAD MOVIL",
+            "GASTOS DE VIAJES", "TAXIS Y BUSES", "HONORARIOS"
         ];
 
+        const listaPrioritarias = prioridadManual.map(nombre => 
+            budgetDataCompleto.find(item => item.nombre === nombre)
+        ).filter(item => item);
 
-        function renderPresupuesto() {
-            document.getElementById('section-title').innerText = "Presupuesto";
-            const grid = document.getElementById('submenu-grid');
-            grid.className = "w-full pb-10";
-            grid.innerHTML = '';
+        const favoritos = getFavoritos ? getFavoritos() : [];
+        const listaFavoritosUsuario = budgetDataCompleto.filter(item => 
+            favoritos.includes(item.nombre) && !prioridadManual.includes(item.nombre)
+        );
+        const listaResto = budgetDataCompleto.filter(item => 
+            !prioridadManual.includes(item.nombre) && !favoritos.includes(item.nombre)
+        );
 
-            const budgetDataCompleto = [
-                { nombre: "POLIZA HYC AGENCIA", valor: 0, meta: 232473094 },
-                { nombre: "PRESTACIONES", valor: 199000000, meta: 1025154250 },
-                { nombre: "SEGURIDAD SOCIAL", valor: 0, meta: 458508855 },
-                { nombre: "SALARIOS", valor: 0, meta: 2067063368 },
-                { nombre: "HONORARIOS", valor: 0, meta: 321239227 },
-                { nombre: "ARRIENDOS", valor: 0, meta: 1473034552 },
-                { nombre: "SEGUROS", valor: 0, meta: 23229964 },
-                { nombre: "SERVICIOS PUBLICOS", valor: 0, meta: 180471617 },
-                { nombre: "MANTENIMIENTO", valor: 0, meta: 57102334 },
-                { nombre: "GASTOS UNIDAD MOVIL", valor: 0, meta: 187682553 },
-                { nombre: "GASTOS DE VIAJES", valor: 0, meta: 29670672 },
-                { nombre: "PUBLICIDAD", valor: 0, meta: 152727300 },
-                { nombre: "GASTOS DE PAPELERIA", valor: 0, meta: 250000 },
-                { nombre: "SERVICIO DE RESTAURA", valor: 0, meta: 9940000 },
-                { nombre: "TAXIS Y BUSES", valor: 0, meta: 13464128 },
-                { nombre: "DIVERSOS", valor: 0, meta: 772646308 }
-            ];
+        // ====================== CREAR TARJETA CON ARCO (CORREGIDO) ======================
+        const crearCard = (item, tipo) => {
+            const porcentaje = item.meta > 0 ? Math.min((item.valor / item.meta) * 100, 100) : 0;
+            const dashArray = 157;
+            const dashOffset = dashArray - (dashArray * porcentaje) / 100;
 
-            // ====================== CUENTAS PRIORITARIAS (FIJAS) ======================
-            const prioridadManual = [
-                "PUBLICIDAD",
-                "DIVERSOS",
-                "GASTOS UNIDAD MOVIL",
-                "GASTOS DE VIAJES",
-                "TAXIS Y BUSES",
-                "HONORARIOS"
-            ];
+            const colores = ['#f97316', '#3b82f6', '#a855f7', '#10b981'];
+            const color = colores[Math.abs(item.nombre.length) % colores.length];
 
-            // Obtenemos las prioritarias en el orden exacto solicitado
-            const listaPrioritarias = prioridadManual.map(nombre =>
-                budgetDataCompleto.find(item => item.nombre === nombre)
-            ).filter(item => item !== undefined);
+            const esPrioritaria = tipo === 'prioritaria';
+            const esFavorito = tipo === 'favorito';
 
-            // ====================== FAVORITOS DEL USUARIO ======================
-            const favoritos = getFavoritos(); // Asumimos que esta función existe
+            return `
+            <div onclick="verDetalleCuenta('${item.nombre}')" 
+                class="card-budget animate-reorder glass p-8 rounded-[3rem] border-white shadow-lg flex flex-col items-center hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] relative
+                ${esPrioritaria ? 'border-2 border-indigo-300 shadow-indigo-200' : ''}
+                ${esFavorito ? 'border-2 border-amber-200 shadow-amber-100' : ''}">
+                
+                <button onclick="toggleFavorito(event, '${item.nombre}')" 
+                        class="absolute top-6 right-8 text-2xl transition-transform hover:scale-125 z-20">
+                ${esFavorito || favoritos.includes(item.nombre) ? '⭐' : '☆'}
+                </button>
 
-            // Filtramos los favoritos, excluyendo las que ya son prioritarias
-            const listaFavoritosUsuario = budgetDataCompleto
-                .filter(item => favoritos.includes(item.nombre) && !prioridadManual.includes(item.nombre));
+                <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center h-10 flex items-center pr-6">
+                ${item.nombre}
+                </h4>
 
-            // ====================== RESTO DE CUENTAS ======================
-            const listaResto = budgetDataCompleto.filter(item => 
-                !prioridadManual.includes(item.nombre) && !favoritos.includes(item.nombre)
-            );
+                <!-- ARCO SVG -->
+                <div class="relative flex items-center justify-center w-full">
+                <svg class="w-64 h-36" viewBox="0 0 120 70">
+                    <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#f1f5f9" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="${color}" stroke-width="14"
+                    stroke-linecap="round" stroke-dasharray="${dashArray}" 
+                    stroke-dashoffset="${dashOffset}"
+                    style="transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1);"/>
+                </svg>
 
-            // ====================== FUNCIÓN PARA CREAR TARJETA ======================
-            const crearCard = (item, tipo) => {
-                const porcentaje = Math.min((item.valor / item.meta) * 100, 100);
-                const dashArray = 157;
-                const dashOffset = dashArray - (dashArray * porcentaje) / 100;
-                const colores = ['#f97316', '#3b82f6', '#a855f7', '#10b981'];
-                const color = colores[Math.abs(item.nombre.length) % colores.length];
-
-                const esPrioritaria = tipo === 'prioritaria';
-                const esFavorito = tipo === 'favorito';
-
-                return `
-                    <div onclick="verDetalleCuenta('${item.nombre}')" 
-                        class="card-budget animate-reorder glass p-8 rounded-[3rem] border-white shadow-lg flex flex-col items-center hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] relative 
-                        ${esPrioritaria ? 'border-2 border-indigo-300 shadow-indigo-200' : ''}
-                        ${esFavorito ? 'border-2 border-amber-200 shadow-amber-100' : ''}">
-                        
-                        <!-- Estrella -->
-                        <button onclick="toggleFavorito(event, '${item.nombre}')" 
-                                class="absolute top-6 right-8 text-2xl transition-transform hover:scale-125 z-20">
-                            ${esFavorito || favoritos.includes(item.nombre) ? '⭐' : '☆'}
-                        </button>
-
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center h-10 flex items-center pr-6">
-                            ${item.nombre}
-                        </h4>
-
-                        <div class="relative flex items-center justify-center w-full">
-                            <svg class="w-64 h-36" viewBox="0 0 120 70">
-                                <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#f1f5f9" stroke-width="14" stroke-linecap="round"/>
-                                <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="${color}" stroke-width="14"
-                                    stroke-linecap="round" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}"
-                                    style="transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1)"/>
-                            </svg>
-                            <div class="absolute bottom-4 text-center w-full px-4">
-                                <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Ejecutado</p>
-                                <span class="text-xl font-black text-slate-800 tracking-tighter">
-                                    $${item.valor.toLocaleString('es-CO')}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="w-full mt-6 flex justify-between items-center border-t border-slate-100 pt-6">
-                            <div>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Presupuesto Total</p>
-                                <p class="text-lg font-bold text-slate-600">$${item.meta.toLocaleString('es-CO')}</p>
-                            </div>
-                            <div class="bg-slate-50 px-4 py-2 rounded-2xl shadow-inner">
-                                <span class="text-xl font-black" style="color: ${color}">${porcentaje.toFixed(1)}%</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            };
-
-            // ====================== RENDERIZADO ======================
-
-            let html = '';
-
-            // 1. Sección de Cuentas Prioritarias
-            if (listaPrioritarias.length > 0) {
-                html += `
-                    <div class="mb-12">
-                        <div class="flex items-center gap-4 mb-8">
-                            <span class="text-xl">⭐</span>
-                            <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Cuentas Prioritarias</h3>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                            ${listaPrioritarias.map(item => crearCard(item, 'prioritaria')).join('')}
-                        </div>
-                    </div>
-                    <div class="separator-line"></div>
-                `;
-            }
-
-            // 2. Sección de Favoritos del Usuario (solo si hay)
-            if (listaFavoritosUsuario.length > 0) {
-                html += `
-                    <div class="mb-12">
-                        <div class="flex items-center gap-4 mb-8">
-                            <span class="text-xl">🌟</span>
-                            <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Mis Favoritos</h3>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                            ${listaFavoritosUsuario.map(item => crearCard(item, 'favorito')).join('')}
-                        </div>
-                    </div>
-                    <div class="separator-line"></div>
-                `;
-            }
-
-            // 3. Sección de Otras Cuentas
-            html += `
-                <div class="mt-8">
-                    <div class="flex items-center gap-4 mb-8">
-                        <span class="text-xl">📊</span>
-                        <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Otras Cuentas Contables</h3>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        ${listaResto.map(item => crearCard(item, 'normal')).join('')}
-                    </div>
+                <div class="absolute bottom-4 text-center w-full px-4">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Ejecutado</p>
+                    <span class="text-xl font-black text-slate-800 tracking-tighter">$${item.valor.toLocaleString('es-CO')}</span>
                 </div>
-            `;
+                </div>
 
-            grid.innerHTML = html;
+                <!-- Parte inferior -->
+                <div class="w-full mt-6 flex justify-between items-center border-t border-slate-100 pt-6">
+                <div>
+                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Presupuesto Total</p>
+                    <p class="text-lg font-bold text-slate-600">$${item.meta.toLocaleString('es-CO')}</p>
+                </div>
+                <div class="bg-slate-50 px-4 py-2 rounded-2xl shadow-inner">
+                    <span class="text-xl font-black" style="color: ${color}">${porcentaje.toFixed(1)}%</span>
+                </div>
+                </div>
+            </div>
+            `;
+        };
+
+        // ====================== ARMAR HTML ======================
+        let html = '';
+
+        if (listaPrioritarias.length > 0) {
+            html += `
+            <div class="mb-12">
+                <div class="flex items-center gap-4 mb-8">
+                <span class="text-xl">⭐</span>
+                <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Cuentas Prioritarias</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                ${listaPrioritarias.map(item => crearCard(item, 'prioritaria')).join('')}
+                </div>
+            </div>
+            <div class="separator-line"></div>
+            `;
         }
 
-
-
-        function verDetalleCuenta(nombreCuenta) {
-            const grid = document.getElementById('submenu-grid');
-            document.getElementById('section-title').innerText = "Detalle: " + nombreCuenta;
-            
-            // Cambiamos el grid a una sola columna para la tabla
-            grid.className = "w-full overflow-x-auto bg-white rounded-3xl p-6 shadow-xl animate-fade-in";
-            
-            // Aquí podrías filtrar tus datos reales. Por ahora generamos filas de ejemplo:
-            grid.innerHTML = `
-                <div class="flex justify-between items-center mb-6">
-                    <button onclick="renderPresupuesto()" class="text-indigo-600 font-bold flex items-center gap-2 hover:underline">
-                        ← Volver al Presupuesto
-                    </button>
-                    <span class="bg-indigo-100 text-indigo-700 px-4 py-1 rounded-full text-xs font-black uppercase">Registros 2026</span>
+        if (listaFavoritosUsuario.length > 0) {
+            html += `
+            <div class="mb-12">
+                <div class="flex items-center gap-4 mb-8">
+                <span class="text-xl">🌟</span>
+                <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Mis Favoritos</h3>
                 </div>
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b-2 border-slate-100 text-[10px] text-slate-400 uppercase tracking-widest">
-                            <th class="py-4 px-4">Fecha</th>
-                            <th class="py-4 px-4">Descripción / Concepto</th>
-                            <th class="py-4 px-4">Referencia</th>
-                            <th class="py-4 px-4 text-right">Valor</th>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                ${listaFavoritosUsuario.map(item => crearCard(item, 'favorito')).join('')}
+                </div>
+            </div>
+            <div class="separator-line"></div>
+            `;
+        }
+
+        html += `
+            <div class="mt-8">
+            <div class="flex items-center gap-4 mb-8">
+                <span class="text-xl">📊</span>
+                <br>
+                <br>
+                <br>
+                <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Otras Cuentas Contables</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                ${listaResto.map(item => crearCard(item, 'normal')).join('')}
+            </div>
+            </div>
+        `;
+
+        grid.innerHTML = html;
+        }
+
+        // ====================== RENDER EJECUCIÓN GENERAL ======================
+        function formatearFecha(fecha) {
+        if (!fecha) return '-';
+
+        const f = new Date(fecha);
+
+        return f.toLocaleDateString('es-CO', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        }
+
+        async function renderEjecucionGeneral() {
+        const grid = document.getElementById('submenu-grid');
+
+        document.getElementById('section-title').innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-2xl font-black text-slate-800">Ejecución Presupuestal General 2026</span>
+            <button onclick="renderPresupuesto()" 
+                    class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-black uppercase tracking-widest px-6 py-3 rounded-2xl shadow-lg transition-all flex items-center gap-2">
+                ← Volver a Presupuesto
+            </button>
+            </div>
+        `;
+
+        grid.className = "w-full pb-10";
+        grid.innerHTML = '<p class="text-center py-20 text-slate-400">Cargando ejecución detallada desde Google Sheet...</p>';
+
+        if (!presupuestoGlobal) {
+            await cargarDatosPresupuesto();
+        }
+
+        if (!presupuestoGlobal || !presupuestoGlobal.movimientos) {
+            grid.innerHTML = '<p class="text-center py-20 text-red-500">No se pudieron cargar los movimientos del Sheet.</p>';
+            return;
+        }
+
+        const grupos = {};
+        presupuestoGlobal.movimientos.forEach(m => {
+            if (!grupos[m.cuentaContable]) grupos[m.cuentaContable] = [];
+            grupos[m.cuentaContable].push(m);
+        });
+
+        // 🔥 AQUÍ VA LO NUEVO
+        const cuentasPrioritarias = [
+            "PUBLICIDAD",
+            "DIVERSOS",
+            "HONORARIOS",
+            "GASTOS UNIDAD MOVIL",
+            "GASTOS DE VIAJES",
+            "TAXIS Y BUSES"
+        ];
+
+        const todasLasCuentas = Object.keys(grupos);
+
+        // Ordenadas (solo las que sí existen en el Excel)
+        const cuentasOrdenadas = cuentasPrioritarias.filter(c => 
+            todasLasCuentas.includes(c)
+        );
+
+        // Las demás
+        const otrasCuentas = todasLasCuentas.filter(c => 
+            !cuentasPrioritarias.includes(c)
+        );
+
+        let html = `<div class="space-y-6">`;
+
+        // 🔥 PRIORITARIAS
+        html += `
+        <div class="mb-4 flex items-center gap-2">
+            <span class="text-lg">⭐</span>
+            <h3 class="text-lm font-black text-black-500 uppercase tracking-widest">
+                Cuentas Prioritarias
+            </h3>
+        </div>
+        `;
+        cuentasOrdenadas.forEach(nombreCuenta => {
+            const items = grupos[nombreCuenta];
+            const totalAsignado = items.reduce((sum, i) => sum + (i.valorAsignado || 0), 0);
+            const totalEjecutado = items.reduce((sum, i) => sum + (i.valorEjecutado || 0), 0);
+
+
+            html += `
+
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div onclick="toggleDetalle(this)" class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors">
+                <div>
+                    <h3 class="font-bold text-xl text-slate-800">${nombreCuenta}</h3>
+                    <p class="text-sm text-slate-500">Asignado: $${totalAsignado.toLocaleString('es-CO')}</p>
+                </div>
+                <span class="text-3xl text-slate-400 transition-transform duration-300">▼</span>
+                </div>
+
+                <div class="detalle-content hidden px-6 pb-8">
+                <div class="overflow-x-auto custom-scrollbar rounded-2xl border border-slate-100">
+                    <table class="w-full text-sm">
+                    <thead class="bg-slate-50 sticky top-0">
+                        <tr class="text-xs uppercase tracking-widest text-slate-500 border-b">
+                        <th class="py-4 px-4 text-center">Ejecución</th>
+                        <th class="py-4 px-4 text-center">Fecha Solped</th>
+                        <th class="py-4 px-4 text-center">Solped</th>
+                        <th class="py-4 px-4 text-left">Concepto / Proveedor</th>
+                        <th class="py-4 px-4 text-center">Orden Compra</th>
+                        <th class="py-4 px-4 text-center">Fecha Causación</th>
+                        <th class="py-4 px-4 text-center">Factura</th>
+                        <th class="py-4 px-4 text-right">Valor Asignado</th>
+                        <th class="py-4 px-4 text-right">Valor Ejecutado</th>
+                        <th class="py-4 px-4 text-right">Disponible</th>
+                        <th class="py-4 px-4 text-center">% Ejecución</th>
+                        <th class="py-4 px-4 text-center">Ver Soportes</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm text-slate-600">
-                        ${generarFilasDetalle(nombreCuenta)}
+                    <tbody class="divide-y">
+                        ${items.map(item => {
+                                let ejecucionIcono = '';
+                                const p = item.porcentajeEjecucion || 0;
+
+                                if (p > 90) {
+                                    ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO ✓</span>';
+                                } else if (p >= 80) {
+                                    ejecucionIcono = '🟢';
+                                } else if (p > 0) {
+                                    ejecucionIcono = '🟡';
+                                } else {
+                                    ejecucionIcono = '🔴';
+                                }
+
+                            return `
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="text-center">${ejecucionIcono}</td>
+                                <td class="py-4 px-4 text-center">${formatearFecha(item.fechaSolped)}</td>
+                                <td class="py-4 px-4 text-center font-mono">${item.solped || '-'}</td>
+                                <td class="py-4 px-4">${item.concepto || ''}</td>
+                                <td class="py-4 px-4 text-center font-mono">${item.ordenCompra || '-'}</td>
+                                <td class="py-4 px-4 text-center">${formatearFecha(item.causacion)}</td>
+                                <td class="py-4 px-4 text-center font-bold">${item.factura || '-'}</td>
+                                <td class="py-4 px-4 text-right font-medium">$${ (item.valorAsignado || 0).toLocaleString('es-CO') }</td>
+                                <td class="py-4 px-4 text-right font-black text-indigo-600">$${ (item.valorEjecutado || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }) }</td>
+                                <td class="py-4 px-4 text-right font-bold">
+                                    <span class="inline-flex items-center gap-1 justify-end 
+                                        ${(item.disponible || 0) < 0 
+                                            ? 'text-red-600' 
+                                            : (item.disponible || 0) < 100000 
+                                                ? 'text-emerald-600' 
+                                                : 'text-black-600'
+                                        }">
+                                        
+                                        $${ (item.disponible || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }) }
+
+                                        ${(item.disponible || 0) < 0 
+                                            ? '⚠' 
+                                            : (item.disponible || 0) < 100000 
+                                                ? '<span class="text-green-500 text-sm">✔</span>' 
+                                                : ''
+                                        }
+                                    </span>
+                                </td>
+                                <td class="font-bold text-center">
+                                    <span class="inline-flex items-center gap-1 justify-center
+                                        ${(item.porcentajeEjecucion || 0) > 100 ? 'text-red-600' : 'text-blue-600'}">
+
+                                        ${(item.porcentajeEjecucion || 0) > 100 
+                                            ? '⚠' 
+                                            : ''
+                                        }
+
+                                        ${(item.porcentajeEjecucion || 0) > 99 
+                                            ? Math.round(item.porcentajeEjecucion) 
+                                            : (item.porcentajeEjecucion || 0).toFixed(1)
+                                        }%
+                                        
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 text-center">
+                                    ${item.linkVer ? `<a href="${item.linkVer}" target="_blank" style="cursor:pointer;" class="text-black-600 hover:underline text-xs font-bold">VER ADJUNTO</a>` : '-'}
+                                </td>
+                            </tr>
+                            `;
+                        }).join('')}
                     </tbody>
-                </table>
+                    </table>
+                </div>
+                </div>
+            </div>
+            `;
+        });
+
+        // 🔥 SEPARADOR
+        if (otrasCuentas.length > 0) {
+            html += `
+            <div class="pt-6">
+                <h3 class="text-lg font-black text-black-400 uppercase tracking-widest mb-2">
+                    <br>
+                    <br>
+                    <br>
+                📊 Otras cuentas
+                </h3>
+            </div>
             `;
         }
 
-        // Función auxiliar para crear filas de ejemplo (luego la conectas a tu base de datos)
-        function generarFilasDetalle(cuenta) {
-            let filas = "";
-            // Simulamos 5 movimientos por cuenta
-            for(let i = 1; i <= 5; i++) {
-                filas += `
-                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                        <td class="py-4 px-4 text-xs">0${i}/03/2026</td>
-                        <td class="py-4 px-4 font-medium italic">Pago correspondiente a ${cuenta.toLowerCase()} - Período Marzo</td>
-                        <td class="py-4 px-4 text-xs font-mono text-slate-400">REF-00${i}82</td>
-                        <td class="py-4 px-4 text-right font-bold text-slate-700">$${(Math.random() * 1000000).toLocaleString('es-CO')}</td>
-                    </tr>
-                `;
-            }
-            return filas;
+        // 🔥 RESTO
+        otrasCuentas.forEach(nombreCuenta => {
+            const items = grupos[nombreCuenta];
+            const totalAsignado = items.reduce((sum, i) => sum + (i.valorAsignado || 0), 0);
+            const totalEjecutado = items.reduce((sum, i) => sum + (i.valorEjecutado || 0), 0);
+
+            html +=  `
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div onclick="toggleDetalle(this)" class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div>
+                        <h3 class="font-bold text-xl text-slate-800">${nombreCuenta}</h3>
+                        <p class="text-sm text-slate-500">Asignado: $${totalAsignado.toLocaleString('es-CO')}</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 transition-transform duration-300">▼</span>
+                    </div>
+
+                    <div class="detalle-content hidden px-6 pb-8">
+                    <div class="overflow-x-auto custom-scrollbar rounded-2xl border border-slate-100">
+                        <table class="w-full text-sm">
+                        <thead class="bg-slate-50 sticky top-0">
+                            <tr class="text-xs uppercase tracking-widest text-slate-500 border-b">
+                            <th class="py-4 px-4 text-center">Ejecución</th>
+                            <th class="py-4 px-4 text-center">Fecha Solped</th>
+                            <th class="py-4 px-4 text-center">Solped</th>
+                            <th class="py-4 px-4 text-left">Concepto / Proveedor</th>
+                            <th class="py-4 px-4 text-center">Orden Compra</th>
+                            <th class="py-4 px-4 text-center">Fecha Causación</th>
+                            <th class="py-4 px-4 text-center">Factura</th>
+                            <th class="py-4 px-4 text-right">Valor Asignado</th>
+                            <th class="py-4 px-4 text-right">Valor Ejecutado</th>
+                            <th class="py-4 px-4 text-right">Disponible</th>
+                            <th class="py-4 px-4 text-center">% Ejecución</th>
+                            <th class="py-4 px-4 text-center">Ver Soportes</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${items.map(item => {
+                                    let ejecucionIcono = '';
+                                    const p = item.porcentajeEjecucion || 0;
+
+                                    if (p > 90) {
+                                        ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO ✓</span>';
+                                    } else if (p >= 80) {
+                                        ejecucionIcono = '🟢';
+                                    } else if (p > 0) {
+                                        ejecucionIcono = '🟡';
+                                    } else {
+                                        ejecucionIcono = '🔴';
+                                    }
+
+                                return `
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="text-center">${ejecucionIcono}</td>
+                                    <td class="py-4 px-4 text-center">${formatearFecha(item.fechaSolped)}</td>
+                                    <td class="py-4 px-4 text-center font-mono">${item.solped || '-'}</td>
+                                    <td class="py-4 px-4">${item.concepto || ''}</td>
+                                    <td class="py-4 px-4 text-center font-mono">${item.ordenCompra || '-'}</td>
+                                    <td class="py-4 px-4 text-center">${formatearFecha(item.causacion)}</td>
+                                    <td class="py-4 px-4 text-center font-bold">${item.factura || '-'}</td>
+                                    <td class="py-4 px-4 text-right font-medium">$${ (item.valorAsignado || 0).toLocaleString('es-CO') }</td>
+                                    <td class="py-4 px-4 text-right font-black text-indigo-600">$${ (item.valorEjecutado || 0).toLocaleString('es-CO') }</td>
+                                    <td class="py-4 px-4 text-right font-bold text-black-600">
+                                        <span class="inline-flex items-center gap-1 justify-end">
+                                            $${ (item.disponible || 0).toLocaleString('es-CO') }
+                                            ${(item.porcentajeEjecucion || 0) > 90 
+                                            ? '<span class="text-green-500 text-sm">✔</span>' 
+                                            : ''
+                                            }
+                                        </span>
+                                    </td>
+                                    <td class="text-blue-600 font-bold text-center">
+                                        ${(item.porcentajeEjecucion || 0).toFixed(1)}%
+                                    </td>
+                                    <td class="py-4 px-4 text-center">
+                                        ${item.linkVer ? `<a href="${item.linkVer}" target="_blank" style="cursor:pointer;" class="text-red-600 hover:underline text-xs font-bold">VER ADJUNTO</a>` : '-'}
+                                    </td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+            `;
+        });
+
+
+
+
+
+
+
+
+
+        html += `</div>`;
+        grid.innerHTML = html;
         }
 
+        // ====================== FUNCIONES AUXILIARES ======================
+        function toggleDetalle(element) {
+        const content = element.nextElementSibling;
+        const arrow = element.querySelector('span:last-child');
+        content.classList.toggle('hidden');
+        if (arrow) arrow.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
 
+        // Mantén tus funciones originales (no las borres)
         function getFavoritos() {
-            const favs = localStorage.getItem('cuentas_favoritas');
-            return favs ? JSON.parse(favs) : [];
+        const favs = localStorage.getItem('cuentas_favoritas');
+        return favs ? JSON.parse(favs) : [];
         }
 
         function toggleFavorito(event, nombreCuenta) {
-            event.stopPropagation();
-            let favs = getFavoritos();
-            const card = event.currentTarget.closest('.card-budget'); // Usaremos esta clase ahora
-            
-            // 1. Animación de feedback inmediato en la tarjeta
-            if (!favs.includes(nombreCuenta)) {
-                event.currentTarget.innerText = '⭐';
-                favs.push(nombreCuenta);
-            } else {
-                event.currentTarget.innerText = '☆';
-                favs = favs.filter(f => f !== nombreCuenta);
-            }
+        event.stopPropagation();
+        let favs = getFavoritos();
 
-            // 2. Breve pausa para que el ojo note el cambio de estado antes del movimiento
-            localStorage.setItem('cuentas_favoritas', JSON.stringify(favs));
-            
-            // Aplicamos una salida suave antes de reordenar
-            const grid = document.getElementById('submenu-grid');
-            grid.style.opacity = "0.5";
-            grid.style.transition = "opacity 0.2s";
-
-            setTimeout(() => {
-                renderPresupuesto();
-                grid.style.opacity = "1";
-            }, 300); 
+        if (!favs.includes(nombreCuenta)) {
+            event.currentTarget.innerText = '⭐';
+            favs.push(nombreCuenta);
+        } else {
+            event.currentTarget.innerText = '☆';
+            favs = favs.filter(f => f !== nombreCuenta);
         }
 
+        localStorage.setItem('cuentas_favoritas', JSON.stringify(favs));
 
+        const grid = document.getElementById('submenu-grid');
+        grid.style.opacity = "0.5";
+        setTimeout(() => {
+            renderPresupuesto();
+            grid.style.opacity = "1";
+        }, 300);
+        }
 
-
+        // Cargar datos automáticamente al iniciar
+        window.addEventListener('load', () => {
+        cargarDatosPresupuesto();
+        });
 
 
 // <!-- LLAMADA DE CALIDAD - SUBSECCIONES -->
@@ -1704,3 +1980,4 @@
     </script>
 </body>
 </html>
+
