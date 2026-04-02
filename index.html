@@ -1241,11 +1241,9 @@
         function renderPresupuesto() {
             document.getElementById('section-title').innerText = "Presupuesto";
             const grid = document.getElementById('submenu-grid');
-            // Quitamos el grid del contenedor principal para manejar las secciones adentro
-            grid.className = "w-full pb-10"; 
+            grid.className = "w-full pb-10";
             grid.innerHTML = '';
 
-            const favoritos = getFavoritos();
             const budgetDataCompleto = [
                 { nombre: "POLIZA HYC AGENCIA", valor: 0, meta: 232473094 },
                 { nombre: "PRESTACIONES", valor: 199000000, meta: 1025154250 },
@@ -1255,46 +1253,85 @@
                 { nombre: "ARRIENDOS", valor: 0, meta: 1473034552 },
                 { nombre: "SEGUROS", valor: 0, meta: 23229964 },
                 { nombre: "SERVICIOS PUBLICOS", valor: 0, meta: 180471617 },
-                { nombre: "MANTENIMIENTO", valor: 0, meta: 57102334 },                
-                { nombre: "GASTOS UNIDAD MOVIL", valor: 0, meta: 187682553 },                
-                { nombre: "GASTOS DE VIAJES", valor: 0, meta: 29670672 },                
-                { nombre: "PUBLICIDAD", valor: 0, meta: 152727300 },                
-                { nombre: "GASTOS DE PAPELERIA", valor: 0, meta: 250000 },                
-                { nombre: "SERVICIO DE RESTAURA", valor: 0, meta: 9940000 },                
-                { nombre: "TAXIS Y BUSES", valor: 0, meta: 13464128 },                
+                { nombre: "MANTENIMIENTO", valor: 0, meta: 57102334 },
+                { nombre: "GASTOS UNIDAD MOVIL", valor: 0, meta: 187682553 },
+                { nombre: "GASTOS DE VIAJES", valor: 0, meta: 29670672 },
+                { nombre: "PUBLICIDAD", valor: 0, meta: 152727300 },
+                { nombre: "GASTOS DE PAPELERIA", valor: 0, meta: 250000 },
+                { nombre: "SERVICIO DE RESTAURA", valor: 0, meta: 9940000 },
+                { nombre: "TAXIS Y BUSES", valor: 0, meta: 13464128 },
                 { nombre: "DIVERSOS", valor: 0, meta: 772646308 }
             ];
 
-            // Separamos los datos
-            const listaFavoritos = budgetDataCompleto.filter(item => favoritos.includes(item.nombre));
-            const listaResto = budgetDataCompleto.filter(item => !favoritos.includes(item.nombre));
+            // ====================== CUENTAS PRIORITARIAS (FIJAS) ======================
+            const prioridadManual = [
+                "PUBLICIDAD",
+                "DIVERSOS",
+                "GASTOS UNIDAD MOVIL",
+                "GASTOS DE VIAJES",
+                "TAXIS Y BUSES",
+                "HONORARIOS"
+            ];
 
-            // Función interna para generar el HTML de una tarjeta
-            const crearCard = (item, isFav, index) => {
+            // Obtenemos las prioritarias en el orden exacto solicitado
+            const listaPrioritarias = prioridadManual.map(nombre =>
+                budgetDataCompleto.find(item => item.nombre === nombre)
+            ).filter(item => item !== undefined);
+
+            // ====================== FAVORITOS DEL USUARIO ======================
+            const favoritos = getFavoritos(); // Asumimos que esta función existe
+
+            // Filtramos los favoritos, excluyendo las que ya son prioritarias
+            const listaFavoritosUsuario = budgetDataCompleto
+                .filter(item => favoritos.includes(item.nombre) && !prioridadManual.includes(item.nombre));
+
+            // ====================== RESTO DE CUENTAS ======================
+            const listaResto = budgetDataCompleto.filter(item => 
+                !prioridadManual.includes(item.nombre) && !favoritos.includes(item.nombre)
+            );
+
+            // ====================== FUNCIÓN PARA CREAR TARJETA ======================
+            const crearCard = (item, tipo) => {
                 const porcentaje = Math.min((item.valor / item.meta) * 100, 100);
-                const dashArray = 157; 
+                const dashArray = 157;
                 const dashOffset = dashArray - (dashArray * porcentaje) / 100;
                 const colores = ['#f97316', '#3b82f6', '#a855f7', '#10b981'];
                 const color = colores[Math.abs(item.nombre.length) % colores.length];
 
+                const esPrioritaria = tipo === 'prioritaria';
+                const esFavorito = tipo === 'favorito';
+
                 return `
-                    <div onclick="verDetalleCuenta('${item.nombre}')" class="card-budget animate-reorder glass p-8 rounded-[3rem] border-white shadow-lg flex flex-col items-center hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] relative ${isFav ? 'border-2 border-indigo-200 shadow-indigo-100' : ''}">
-                        <button onclick="toggleFavorito(event, '${item.nombre}')" class="absolute top-6 right-8 text-2xl transition-transform hover:scale-125 z-10">
-                            ${isFav ? '⭐' : '☆'}
+                    <div onclick="verDetalleCuenta('${item.nombre}')" 
+                        class="card-budget animate-reorder glass p-8 rounded-[3rem] border-white shadow-lg flex flex-col items-center hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] relative 
+                        ${esPrioritaria ? 'border-2 border-indigo-300 shadow-indigo-200' : ''}
+                        ${esFavorito ? 'border-2 border-amber-200 shadow-amber-100' : ''}">
+                        
+                        <!-- Estrella -->
+                        <button onclick="toggleFavorito(event, '${item.nombre}')" 
+                                class="absolute top-6 right-8 text-2xl transition-transform hover:scale-125 z-20">
+                            ${esFavorito || favoritos.includes(item.nombre) ? '⭐' : '☆'}
                         </button>
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center h-10 flex items-center pr-6">${item.nombre}</h4>
+
+                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center h-10 flex items-center pr-6">
+                            ${item.nombre}
+                        </h4>
+
                         <div class="relative flex items-center justify-center w-full">
                             <svg class="w-64 h-36" viewBox="0 0 120 70">
                                 <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#f1f5f9" stroke-width="14" stroke-linecap="round"/>
-                                <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="${color}" stroke-width="14" 
+                                <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="${color}" stroke-width="14"
                                     stroke-linecap="round" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}"
                                     style="transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1)"/>
                             </svg>
                             <div class="absolute bottom-4 text-center w-full px-4">
                                 <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Ejecutado</p>
-                                <span class="text-xl font-black text-slate-800 tracking-tighter">$${item.valor.toLocaleString('es-CO')}</span>
+                                <span class="text-xl font-black text-slate-800 tracking-tighter">
+                                    $${item.valor.toLocaleString('es-CO')}
+                                </span>
                             </div>
                         </div>
+
                         <div class="w-full mt-6 flex justify-between items-center border-t border-slate-100 pt-6">
                             <div>
                                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Presupuesto Total</p>
@@ -1308,34 +1345,56 @@
                 `;
             };
 
-            // Renderizar Sección Favoritos si existen
-            if (listaFavoritos.length > 0) {
-                grid.innerHTML += `
+            // ====================== RENDERIZADO ======================
+
+            let html = '';
+
+            // 1. Sección de Cuentas Prioritarias
+            if (listaPrioritarias.length > 0) {
+                html += `
                     <div class="mb-12">
                         <div class="flex items-center gap-4 mb-8">
                             <span class="text-xl">⭐</span>
-                            <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Cuentas Contables Favoritas</h3>
+                            <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Cuentas Prioritarias</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                            ${listaFavoritos.map(item => crearCard(item, true)).join('')}
+                            ${listaPrioritarias.map(item => crearCard(item, 'prioritaria')).join('')}
                         </div>
                     </div>
                     <div class="separator-line"></div>
                 `;
             }
 
-            // Renderizar Sección General
-            grid.innerHTML += `
+            // 2. Sección de Favoritos del Usuario (solo si hay)
+            if (listaFavoritosUsuario.length > 0) {
+                html += `
+                    <div class="mb-12">
+                        <div class="flex items-center gap-4 mb-8">
+                            <span class="text-xl">🌟</span>
+                            <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Mis Favoritos</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                            ${listaFavoritosUsuario.map(item => crearCard(item, 'favorito')).join('')}
+                        </div>
+                    </div>
+                    <div class="separator-line"></div>
+                `;
+            }
+
+            // 3. Sección de Otras Cuentas
+            html += `
                 <div class="mt-8">
                     <div class="flex items-center gap-4 mb-8">
                         <span class="text-xl">📊</span>
-                        <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Cuentas Contables</h3>
+                        <h3 class="text-lg font-black text-slate-700 uppercase tracking-widest">Otras Cuentas Contables</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        ${listaResto.map(item => crearCard(item, false)).join('')}
+                        ${listaResto.map(item => crearCard(item, 'normal')).join('')}
                     </div>
                 </div>
             `;
+
+            grid.innerHTML = html;
         }
 
 
