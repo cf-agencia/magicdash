@@ -1500,6 +1500,10 @@
             const items = grupos[nombreCuenta];
             const totalAsignado = items.reduce((sum, i) => sum + (i.valorAsignado || 0), 0);
             const totalEjecutado = items.reduce((sum, i) => sum + (i.valorEjecutado || 0), 0);
+            const disponible = totalAsignado - totalEjecutado;
+            const porcentaje = totalAsignado > 0 
+            ? (totalEjecutado / totalAsignado) * 100 
+            : 0;
 
 
             html += `
@@ -1508,7 +1512,23 @@
                 <div onclick="toggleDetalle(this)" class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors">
                 <div>
                     <h3 class="font-bold text-xl text-slate-800">${nombreCuenta}</h3>
-                    <p class="text-sm text-slate-500">Asignado: $${totalAsignado.toLocaleString('es-CO')}</p>
+                    <p class="text-sm text-slate-500">
+                        Asignado: $${totalAsignado.toLocaleString('es-CO')}
+                    </p>
+
+                    <p class="text-sm text-black-600 font-bold">
+                        Ejecutado: $${totalEjecutado.toLocaleString('es-CO')}
+                    </p>
+
+                    <p class="text-sm text-indigo-600 font-bold">
+                        Disponible: $${disponible.toLocaleString('es-CO')}
+                    </p>
+
+                    <p class="text-xs font-bold ${
+                        porcentaje > 100 ? 'text-red-600' : 'text-green-600'
+                    }">
+                        ${porcentaje.toFixed(1)}%
+                    </p>
                 </div>
                 <span class="text-3xl text-slate-400 transition-transform duration-300">▼</span>
                 </div>
@@ -1538,7 +1558,7 @@
                                 const p = item.porcentajeEjecucion || 0;
 
                                 if (p > 90) {
-                                    ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO ✓</span>';
+                                    ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO</span>';
                                 } else if (p >= 80) {
                                     ejecucionIcono = '🟢';
                                 } else if (p > 0) {
@@ -1556,8 +1576,12 @@
                                 <td class="py-4 px-4 text-center font-mono">${item.ordenCompra || '-'}</td>
                                 <td class="py-4 px-4 text-center">${formatearFecha(item.causacion)}</td>
                                 <td class="py-4 px-4 text-center font-bold">${item.factura || '-'}</td>
-                                <td class="py-4 px-4 text-right font-medium">$${ (item.valorAsignado || 0).toLocaleString('es-CO') }</td>
-                                <td class="py-4 px-4 text-right font-black text-indigo-600">$${ (item.valorEjecutado || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }) }</td>
+                                <td class="py-4 px-4 text-right font-medium">
+                                    $${Math.round(item.valorAsignado || 0).toLocaleString('es-CO')}
+                                </td>
+                                <td class="py-4 px-4 text-right font-black text-indigo-600">
+                                    $${Math.round(item.valorEjecutado || 0).toLocaleString('es-CO')}
+                                </td>
                                 <td class="py-4 px-4 text-right font-bold">
                                     <span class="inline-flex items-center gap-1 justify-end 
                                         ${(item.disponible || 0) < 0 
@@ -1626,13 +1650,33 @@
             const items = grupos[nombreCuenta];
             const totalAsignado = items.reduce((sum, i) => sum + (i.valorAsignado || 0), 0);
             const totalEjecutado = items.reduce((sum, i) => sum + (i.valorEjecutado || 0), 0);
+            const disponible = totalAsignado - totalEjecutado;
+            const porcentaje = totalAsignado > 0 
+            ? (totalEjecutado / totalAsignado) * 100 
+            : 0;
 
             html +=  `
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                     <div onclick="toggleDetalle(this)" class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors">
                     <div>
                         <h3 class="font-bold text-xl text-slate-800">${nombreCuenta}</h3>
-                        <p class="text-sm text-slate-500">Asignado: $${totalAsignado.toLocaleString('es-CO')}</p>
+                        <p class="text-sm text-slate-500">
+                            Asignado: $${totalAsignado.toLocaleString('es-CO')}
+                        </p>
+
+                        <p class="text-sm text-black-600 font-bold">
+                            Ejecutado: $${totalEjecutado.toLocaleString('es-CO')}
+                        </p>
+
+                        <p class="text-sm text-indigo-600 font-bold">
+                            Disponible: $${disponible.toLocaleString('es-CO')}
+                        </p>
+
+                        <p class="text-xs font-bold ${
+                            porcentaje > 100 ? 'text-red-600' : 'text-green-600'
+                        }">
+                            ${porcentaje.toFixed(1)}%
+                        </p>
                     </div>
                     <span class="text-3xl text-slate-400 transition-transform duration-300">▼</span>
                     </div>
@@ -1662,7 +1706,7 @@
                                     const p = item.porcentajeEjecucion || 0;
 
                                     if (p > 90) {
-                                        ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO ✓</span>';
+                                        ejecucionIcono = '<span class="font-bold" style="color:#22c55e;">EJECUTADO</span>';
                                     } else if (p >= 80) {
                                         ejecucionIcono = '🟢';
                                     } else if (p > 0) {
