@@ -1504,6 +1504,7 @@
             const porcentaje = totalAsignado > 0 
             ? (totalEjecutado / totalAsignado) * 100 
             : 0;
+            
 
 
             html += `
@@ -1605,14 +1606,16 @@
                                     <span class="inline-flex items-center gap-1 justify-center
                                         ${(item.porcentajeEjecucion || 0) > 100 ? 'text-red-600' : 'text-blue-600'}">
 
-                                        ${(item.porcentajeEjecucion || 0) > 100 
-                                            ? '⚠' 
-                                            : ''
-                                        }
+                                        ${(item.porcentajeEjecucion || 0) > 100 ? '⚠' : ''}
 
-                                        ${(item.porcentajeEjecucion || 0) > 99 
-                                            ? Math.round(item.porcentajeEjecucion) 
-                                            : (item.porcentajeEjecucion || 0).toFixed(1)
+                                        ${
+                                            (() => {
+                                                const p = item.porcentajeEjecucion || 0;
+
+                                                return p >= 100
+                                                    ? Math.round(p)          // 110, 135
+                                                    : p.toFixed(2);          // 99.99
+                                            })()
                                         }%
                                         
                                     </span>
@@ -1724,19 +1727,48 @@
                                     <td class="py-4 px-4 text-center font-mono">${item.ordenCompra || '-'}</td>
                                     <td class="py-4 px-4 text-center">${formatearFecha(item.causacion)}</td>
                                     <td class="py-4 px-4 text-center font-bold">${item.factura || '-'}</td>
-                                    <td class="py-4 px-4 text-right font-medium">$${ (item.valorAsignado || 0).toLocaleString('es-CO') }</td>
-                                    <td class="py-4 px-4 text-right font-black text-indigo-600">$${ (item.valorEjecutado || 0).toLocaleString('es-CO') }</td>
-                                    <td class="py-4 px-4 text-right font-bold text-black-600">
-                                        <span class="inline-flex items-center gap-1 justify-end">
-                                            $${ (item.disponible || 0).toLocaleString('es-CO') }
-                                            ${(item.porcentajeEjecucion || 0) > 90 
-                                            ? '<span class="text-green-500 text-sm">✔</span>' 
-                                            : ''
+                                    <td class="py-4 px-4 text-right font-medium">
+                                        $${Math.round(item.valorAsignado || 0).toLocaleString('es-CO')}
+                                    </td>
+                                    <td class="py-4 px-4 text-right font-black text-indigo-600">
+                                        $${Math.round(item.valorEjecutado || 0).toLocaleString('es-CO')}
+                                    </td>
+                                    <td class="py-4 px-4 text-right font-bold">
+                                        <span class="inline-flex items-center gap-1 justify-end 
+                                            ${(item.disponible || 0) < 0 
+                                                ? 'text-red-600' 
+                                                : (item.disponible || 0) < 100000 
+                                                    ? 'text-emerald-600' 
+                                                    : 'text-black-600'
+                                            }">
+                                            
+                                            $${ (item.disponible || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }) }
+
+                                            ${(item.disponible || 0) < 0 
+                                                ? '⚠' 
+                                                : (item.disponible || 0) < 100000 
+                                                    ? '<span class="text-green-500 text-sm">✔</span>' 
+                                                    : ''
                                             }
                                         </span>
                                     </td>
-                                    <td class="text-blue-600 font-bold text-center">
-                                        ${(item.porcentajeEjecucion || 0).toFixed(1)}%
+                                    <td class="font-bold text-center">
+                                        <span class="inline-flex items-center gap-1 justify-center
+                                            ${(item.porcentajeEjecucion || 0) > 100 ? 'text-red-600' : 'text-blue-600'}">
+
+                                            ${(item.porcentajeEjecucion || 0) > 100 ? '⚠' : ''}
+
+                                            ${
+                                                (() => {
+                                                    const p = item.porcentajeEjecucion || 0;
+
+                                                    return p >= 100
+                                                        ? Math.round(p)          // 110, 135
+                                                        : p.toFixed(2);          // 99.99
+                                                })()
+                                            }%
+                                            
+                                        </span>
                                     </td>
                                     <td class="py-4 px-4 text-center">
                                         ${item.linkVer ? `<a href="${item.linkVer}" target="_blank" style="cursor:pointer;" class="text-red-600 hover:underline text-xs font-bold">VER ADJUNTO</a>` : '-'}
@@ -2024,4 +2056,5 @@
     </script>
 </body>
 </html>
+
 
